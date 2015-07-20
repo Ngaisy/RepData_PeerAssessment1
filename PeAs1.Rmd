@@ -1,0 +1,103 @@
+# Reproducible Reseach: Peer Assessment 1  
+## Loading and preprocessing the data
+```{r}
+dir = "/Users/Shawn/Documents/BigData/Coursea/5.Reproducible Research/"
+setwd(dir)
+
+activity <- read.csv("activity.csv")  
+```
+## Mean of total number of steps taken per day
+```{r}
+dir = "/Users/Shawn/Documents/BigData/Coursea/5.Reproducible Research/"
+setwd(dir)
+
+activity <- read.csv("activity.csv")  
+```
+
+```{r}
+library(ggplot2)
+tot_steps <- tapply(activity$steps, activity$date, FUN = sum, na.rm = TRUE)
+hist(tot_steps, xlab="total number of steps taken each day")
+mean(tot_steps, na.rm = TRUE)
+median(tot_steps, na.rm = TRUE)
+```
+## Mean total number of steps taken per day
+```{r}
+Aversteps <- aggregate(x = list(steps = activity$steps),
+                  by = list(interval = activity$interval), 
+                  FUN = mean,
+                  na.rm = TRUE)
+
+d <- ggplot(data = Aversteps, aes(x = interval, y = steps))
+plot <- d + geom_line() +
+       ggtitle("Time series plot: 5-minute interval vs averaged across all days ") + 
+       xlab("5-minute interval") + 
+       ylab("averaged across all days")
+```
+
+## The 5-minute interval of Maximun number of steps 
+```{r}
+max.steps <- Aversteps[Aversteps$steps == max(Aversteps$steps), ][1]
+```
+## Calculate and report the total number of missing values in the dataset 
+```{r}
+sum(is.na(activity))
+```
+## Inputing missig values
+```{r}
+newactivity <- activity 
+for(i in 1:nrow(newactivity)){
+  if(is.na(newactivity$steps[i] == TRUE))
+    newactivity$steps[i] <- Aversteps[which(newactivity$interval[i] == activity$interval[i]),]$steps
+}
+```
+## Check the number of NA in new data set
+```{r}
+sum(is.na(newactivity))
+
+plot_newactivity_steps <- ggplot(newactivity, aes(date, steps)) + geom_bar(stat = "identity",
+                                                 colour = "grey",
+                                                 fill = "grey",
+                                                 width = 0.7) 
+
+new_tot_steps <- aggregate(newactivity$steps, 
+                           list(Date = newactivity$date), 
+                           FUN = sum)
+colnames(new_tot_steps) <- c("date","steps")
+```
+
+## Mean and median of the edited total steps per day
+```{r}
+mean_new_tot_steps <- mean(new_tot_steps$steps)
+median_new_tot_steps <- median(new_tot_steps$steps)
+```
+## Mean and median of the orignal total steps per day
+```{r}
+mean_ori_tot_steps <- mean(tot_steps, na.rm = TRUE)
+median_ori_tot_steps <- median(tot_steps, na.rm = TRUE)
+```
+## Comparision the orignal and new data set
+```{r}
+diff_mean = mean_new_tot_steps - mean_ori_tot_steps
+diff_median = median_new_tot_steps - median_ori_tot_steps
+```
+## Differences in activity patterns between weekdays and weekends
+```{r}
+weekday_or_weekend <- function(date) {
+  day <- weekdays(date)
+  if (day %in% c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday"))
+    return("weekday")
+  else if (day %in% c("Saturday", "Sunday"))
+    return("weekend")
+  else
+    stop("invalid date")
+}
+newactivity$date <- as.Date(newactivity$date)
+newactivity$day <- sapply(newactivity$date, FUN=weekday_or_weekend)
+
+
+averages <- aggregate(steps ~ interval + day, data=newactivity, mean)
+ggplot(averages, aes(interval, steps)) + geom_line() + facet_grid(day ~ .) +
+  xlab("5-minute interval") + ylab("Number of steps")
+
+```
